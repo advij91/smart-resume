@@ -1,65 +1,129 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
+import { useState, useEffect, useRef } from "react";
+import { FileText, MessageSquareCode } from "lucide-react";
+
+import TraditionalResume from "@/components/TraditionalResume";
+import AiCopilot from "@/components/AiCopilot";
+
+export default function SmartResumeDashboard() {
+  const { messages, status, sendMessage } = useChat({
+    transport: new DefaultChatTransport({ api: "/api/chat" }),
+  });
+
+  const [jobDescription, setJobDescription] = useState("");
+  const [input, setInput] = useState("");
+  const [activeMobileTab, setActiveMobileTab] = useState<"resume" | "ai">("resume");
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const isLoading = status === "streaming" || status === "submitted";
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, isLoading]);
+
+  const extractTextFromUIMessage = (message: any): string => {
+    if (typeof message.content === "string") return message.content;
+    if (!message.parts) return "";
+    return message.parts
+      .filter((p: any) => p.type === "text")
+      .map((p: any) => p.text || "")
+      .join("");
+  };
+
+  const handleAnalyzeFitment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!jobDescription.trim()) return;
+
+    sendMessage({
+      text: `Please analyze this Job Description and give me a clear breakdown of why Ashutosh Vijay is a fit. Map his professional experience (such as Custody Client Onboarding Digitization, OMRC Systematic Break Remediation, Generic Control Frameworks, Nexen API Services, and Trade Solutions) and personal projects (such as FoodApp Multi-tenant ERP, Autonomous Mail Classification Portal, and AI Invoice Extractor) directly to the job's technical and domain requirements:\n\n${jobDescription}`,
+    });
+
+    setJobDescription("");
+    textareaRef.current?.blur();
+  };
+
+
+  const handleChatSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    sendMessage({ text: input });
+    setInput("");
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main className="min-h-screen bg-azure text-slate-900 font-sans p-4 md:p-8 pb-24 lg:pb-8 selection:bg-baltic/20 selection:text-baltic">
+
+      {/* Upper Brand Info */}
+      <header className="max-w-7xl lg:max-w-none w-full mx-auto mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200 pb-5 gap-3">
+        <div>
+          <h1 className="text-2xl font-extrabold bg-gradient-to-r from-sandy to-copper bg-clip-text text-transparent tracking-tight">
+            Portfolio Intelligence Engine
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </header>
+
+      {/* Main Container Core Grid */}
+      <div className="max-w-7xl lg:max-w-none w-full mx-auto grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
+
+        {/* RESPONSIVE DISPLAY GRID INTERCEPTOR */}
+
+        {/* Component 1 View wrapper (Traditional Resume) */}
+        <div className={`lg:col-span-3 ${activeMobileTab === "resume" ? "block" : "hidden lg:block"}`}>
+          <TraditionalResume />
         </div>
-      </main>
-    </div>
+
+        {/* Component 2 View wrapper (AI RAG Stream Endpoint) */}
+        <div className={`lg:col-span-2 ${activeMobileTab === "ai" ? "block" : "hidden lg:block"}`}>
+          <AiCopilot
+            messages={messages}
+            status={status}
+            input={input}
+            setInput={setInput}
+            jobDescription={jobDescription}
+            setJobDescription={setJobDescription}
+            handleChatSubmit={handleChatSubmit}
+            handleAnalyzeFitment={handleAnalyzeFitment}
+            sendMessage={sendMessage}
+            extractText={extractTextFromUIMessage}
+            scrollRef={scrollRef}
+            textareaRef={textareaRef}
+          />
+        </div>
+
+      </div>
+
+      {/* MOBILE PERSISTENT COMPONENT SWITCHER TAB BAR (Only displays below lg size breakpoint) */}
+      <nav className="fixed bottom-4 left-4 right-4 bg-white/90 border border-slate-200/80 p-1.5 rounded-2xl flex gap-1 backdrop-blur-md shadow-2xl lg:hidden z-50">
+        <button
+          type="button"
+          onClick={() => setActiveMobileTab("resume")}
+          className={`flex-1 flex items-center justify-center gap-2 text-xs font-mono py-3 px-4 rounded-xl transition-all ${activeMobileTab === "resume"
+              ? "bg-gradient-to-r from-baltic/20 to-sandy/20 border border-baltic/30 text-baltic font-bold"
+              : "text-slate-500 hover:text-slate-700"
+            }`}
+        >
+          <FileText className="w-4 h-4" /> Credentials
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveMobileTab("ai")}
+          className={`flex-1 flex items-center justify-center gap-2 text-xs font-mono py-3 px-4 rounded-xl transition-all ${activeMobileTab === "ai"
+              ? "bg-gradient-to-r from-baltic/20 to-sandy/20 border border-baltic/30 text-baltic font-bold"
+              : "text-slate-500 hover:text-slate-700"
+            }`}
+        >
+          <MessageSquareCode className="w-4 h-4" /> AI Copilot
+        </button>
+      </nav>
+
+    </main>
   );
 }
