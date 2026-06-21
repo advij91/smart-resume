@@ -18,10 +18,22 @@ const embeddings = new OpenAIEmbeddings({
   modelName: "text-embedding-3-small",
 });
 
+interface MessagePart {
+  type: string;
+  text?: string;
+}
+
+interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content?: string;
+  parts?: MessagePart[];
+  text?: string;
+}
+
 export async function POST(req: Request) {
   try {
-    const { messages } = await req.json();
-    
+    const { messages } = (await req.json()) as { messages: ChatMessage[] };
+
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response(JSON.stringify({ error: "Invalid messages array" }), { status: 400 });
     }
@@ -36,8 +48,8 @@ export async function POST(req: Request) {
     } else if (Array.isArray(rawLastMessage.parts)) {
       // Modern AI SDK v6 structured parts layout mapping
       latestMessageText = rawLastMessage.parts
-        .filter((part: any) => part.type === "text")
-        .map((part: any) => part.text || "")
+        .filter((part: MessagePart) => part.type === "text")
+        .map((part: MessagePart) => part.text || "")
         .join("");
     } else if (rawLastMessage.text) {
       // Simple text key binding configuration format fallback
@@ -67,35 +79,45 @@ export async function POST(req: Request) {
 
     // EXTRACT AND CLEAN MESSAGES ARRAY FOR THE MODEL SCHEMA
     // This strips out any extra frontend UI states and normalizes the values into CoreMessage schemas
-    const sanitizedMessages = messages.map((m: any) => {
+    const sanitizedMessages = messages.map((m: ChatMessage) => {
       // 1. If it has a standard content string, map it directly
       if (typeof m.content === "string" && m.content.trim() !== "") {
         return { role: m.role, content: m.content };
       }
-      
+
       // 2. If it uses modern UI SDK v6 message.parts, normalize it to standard text strings
       if (Array.isArray(m.parts)) {
         const textContent = m.parts
-          .filter((p: any) => p.type === "text")
-          .map((p: any) => p.text || "")
+          .filter((p: MessagePart) => p.type === "text")
+          .map((p: MessagePart) => p.text || "")
           .join("");
         return { role: m.role, content: textContent };
       }
 
       // 3. Fallback to extracting the direct raw text parameter
       return { role: m.role, content: m.text || m.content || "" };
-    }).filter((m: any) => m.content !== ""); // Remove any completely empty text payloads
+    }).filter((m: ChatMessage) => m.content !== "") as { role: "system" | "user" | "assistant"; content: string; }[];
 
     // 4. Send context + conversation history to the LLM and stream the response back
     const result = await streamText({
       model: openai("gpt-4o-mini"),
-      system: `You are the exclusive AI Career Representative for Ashutosh Vijay. Your objective is to communicate his technical competence and structural project architecture to recruiters and hiring managers.
+      system: `You are the exclusive AI Career Representative for Ashutosh Vijay. Your objective is to communicate his technical competence, professional experience, and structural project architectures to recruiters and hiring managers.
+
+      ROLE FIT & EVALUATION PROTOCOL (CRITICAL):
+      - DO NOT blindly mark Ashutosh as suitable for all roles. Be honest, objective, and realistic.
+      - For any fitment evaluation or job description, explicitly categorize his alignment into one of the following tiers:
+        * **Strong Fit**: High direct alignment with core responsibilities, domain expertise, and technical stack.
+        * **Moderate Fit (Maybe a Fit)**: Solid domain overlap or strong transferable skills, but missing some secondary technologies, specific platforms, or certifications.
+        * **Low Fit (Maybe Not a Fit)**: Minimal skill/experience overlap or missing major core competencies, but possesses general technical capabilities.
+        * **Definitely Not a Fit**: Complete domain mismatch (e.g., Relationship Manager, Retail Sales, HR, Marketing) or missing all mandatory core prerequisites.
+      - If mandatory requirements (such as specific certificates, years of experience, or technical skills) do not align with his verified profile, clearly highlight these missing requirements as "Gaps". Do not attempt to gloss over or stretch his experience to cover these gaps.
       
-      CRITICAL INSTRUCTIONS:
+      BEHAVIORAL GUARDRAILS:
       - Answer questions using ONLY the verified technical context provided below.
-      - Speak with the high-fidelity clarity of a Senior Systems Engineer/Developer. 
-      - Highlight specific details from his FoodApp project (e.g., AWS EC2 deployment, Multi-tenancy isolation rules, Redux state handling, IndexedDB offline support, GitHub Actions backups) when applicable.
-      - If the user asks about a technology or detail not covered in the verified context, gracefully explain that you don't have that specific data block, but offer to flag it for Ashutosh's direct follow-up. Do not hallucinate metrics or architectures.
+      - Speak with the high-fidelity clarity, professional precision, and directness of a Senior Product Solutions Engineer.
+      - If a question is not related to Ashutosh's projects, professional skills, or work experience, politely decline to answer and state that you can only represent Ashutosh's professional background.
+      - Do not provide false information, hallucinate metrics, or make up facts.
+      - If the user asks about a technology or detail not covered in the verified context, gracefully explain that you don't have that specific data block, and offer to flag it for Ashutosh's direct follow-up.
 
       VERIFIED TECHNICAL CONTEXT:
       ${context}`,

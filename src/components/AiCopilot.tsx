@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, ReactNode } from "react";
 import { Terminal, Loader2, Shield, Cpu, Send, RefreshCw, MessageSquare } from "lucide-react";
 
 interface MessageType {
@@ -78,7 +78,7 @@ export default function AiCopilot({
           <Shield className="w-10 h-10 text-copper/85 mx-auto mb-3" />
           <h3 className="text-base font-bold text-slate-800">Evaluate Alignment Score</h3>
           <p className="text-slate-600 text-xs mt-2 mb-5 leading-relaxed">
-            Drop a target requirement list or job layout here. The cross-checked RAG parser will match against Ashutosh's embedded project metrics instantly.
+            Drop a target requirement list or job layout here. The cross-checked RAG parser will match against {"Ashutosh's"} embedded project metrics instantly.
           </p>
 
           <form 
@@ -131,7 +131,7 @@ export default function AiCopilot({
                   <MessageSquare className="w-10 h-10 text-copper mx-auto opacity-85" />
                   <h3 className="text-sm font-bold text-slate-800">Interactive Query Portal</h3>
                   <p className="text-slate-600 text-xs leading-relaxed">
-                    Ask anything about Ashutosh's technical expertise, project architecture, or domain capabilities. Select an example prompt or type your question below:
+                    Ask anything about {"Ashutosh's"} technical expertise, project architecture, or domain capabilities. Select an example prompt or type your question below:
                   </p>
                 </div>
 
@@ -170,7 +170,11 @@ export default function AiCopilot({
                     <div className={`text-[9px] font-mono tracking-wider uppercase mb-1 ${isUser ? "opacity-80 text-orange-50" : "opacity-60 text-slate-500"}`}>
                       {isUser ? "User Requirement" : "AI Agent Engine"}
                     </div>
-                    <div className="whitespace-pre-wrap">{textContent}</div>
+                    {isUser ? (
+                      <div className="whitespace-pre-wrap">{textContent}</div>
+                    ) : (
+                      <MarkdownRenderer content={textContent} />
+                    )}
                   </div>
                 </div>
               );
@@ -208,4 +212,83 @@ export default function AiCopilot({
       )}
     </div>
   );
+}
+
+function parseInlineMarkdown(text: string) {
+  const regex = /(\*\*.*?\*\*|`.*?`)/g;
+  const parts = text.split(regex);
+  return parts.map((part, index) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={index} className="font-semibold text-slate-900">{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith('`') && part.endsWith('`')) {
+      return <code key={index} className="bg-slate-100 px-1 py-0.5 rounded font-mono text-[11px] text-copper">{part.slice(1, -1)}</code>;
+    }
+    return part;
+  });
+}
+
+function MarkdownRenderer({ content }: { content: string }) {
+  if (!content) return null;
+
+  const lines = content.split('\n');
+  const elements: ReactNode[] = [];
+  let currentList: ReactNode[] = [];
+
+  const flushList = (key: number) => {
+    if (currentList.length > 0) {
+      elements.push(
+        <ul key={`ul-${key}`} className="list-disc pl-4 my-1.5 space-y-1">
+          {currentList}
+        </ul>
+      );
+      currentList = [];
+    }
+  };
+
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith('### ')) {
+      flushList(index);
+      elements.push(
+        <h4 key={index} className="text-xs md:text-sm font-bold text-slate-900 mt-2.5 mb-1">
+          {parseInlineMarkdown(trimmed.substring(4))}
+        </h4>
+      );
+    } else if (trimmed.startsWith('## ')) {
+      flushList(index);
+      elements.push(
+        <h3 key={index} className="text-sm md:text-base font-bold text-slate-950 mt-3.5 mb-1.5">
+          {parseInlineMarkdown(trimmed.substring(3))}
+        </h3>
+      );
+    } else if (trimmed.startsWith('# ')) {
+      flushList(index);
+      elements.push(
+        <h2 key={index} className="text-base md:text-lg font-bold text-slate-950 mt-3.5 mb-1.5">
+          {parseInlineMarkdown(trimmed.substring(2))}
+        </h2>
+      );
+    } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+      currentList.push(
+        <li key={`li-${index}`} className="text-xs md:text-sm text-slate-700">
+          {parseInlineMarkdown(trimmed.substring(2))}
+        </li>
+      );
+    } else if (trimmed === '') {
+      flushList(index);
+    } else {
+      flushList(index);
+      elements.push(
+        <p key={index} className="mb-1.5 leading-relaxed text-slate-700">
+          {parseInlineMarkdown(line)}
+        </p>
+      );
+    }
+  });
+
+  flushList(lines.length);
+
+  return <div className="space-y-0.5">{elements}</div>;
 }
