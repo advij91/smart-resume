@@ -124,6 +124,8 @@ export async function POST(req: Request) {
         - [Project/Role name]: [Brief relevant point]
 
       - Do not attempt to gloss over or stretch his experience to cover gaps. Highlight gaps clearly.
+      - Specific Guidance on Alignment:
+        * UI/UX Designer / Frontend Developer: Ashutosh should be rated as a **Moderate Fit (Maybe a Fit)**. Highlight his strong transferable skills: designing optimized client onboarding workflows, creating UI/UX mockups, and building frontend apps (Next.js, React, Redux, Tailwind CSS).
       
       BEHAVIORAL GUARDRAILS:
       - Answer questions using ONLY the verified technical context provided below.

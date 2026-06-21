@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import { FileText, MessageSquareCode } from "lucide-react";
 
 import TraditionalResume from "@/components/TraditionalResume";
-import AiCopilot from "@/components/AiCopilot";
+import AiCopilot, { MessageType } from "@/components/AiCopilot";
 
 export default function SmartResumeDashboard() {
   const { messages, status, sendMessage } = useChat({
@@ -28,13 +28,28 @@ export default function SmartResumeDashboard() {
     }
   }, [messages, isLoading]);
 
-  const extractTextFromUIMessage = (message: any): string => {
-    if (typeof message.content === "string") return message.content;
-    if (!message.parts) return "";
-    return message.parts
-      .filter((p: any) => p.type === "text")
-      .map((p: any) => p.text || "")
-      .join("");
+  const extractTextFromUIMessage = (message: MessageType): string => {
+    let content = "";
+    if (typeof message.content === "string") {
+      content = message.content;
+    } else if (Array.isArray(message.parts)) {
+      content = message.parts
+        .filter((p) => p.type === "text")
+        .map((p) => p.text || "")
+        .join("");
+    } else if (message.text) {
+      content = message.text;
+    }
+
+    const boilerplate = "Please analyze this Job Description and give me a clear breakdown of why Ashutosh Vijay is a fit. Map his professional experience (such as Custody Client Onboarding Digitization, OMRC Systematic Break Remediation, Generic Control Frameworks, Nexen API Services, and Trade Solutions) and personal projects (such as FoodApp Multi-tenant ERP, Autonomous Mail Classification Portal, and AI Invoice Extractor) directly to the job's technical and domain requirements:";
+
+    if (content.startsWith(boilerplate)) {
+      const jobDesc = content.substring(boilerplate.length).trim();
+      const snippet = jobDesc.length > 250 ? `${jobDesc.substring(0, 250)}...` : jobDesc;
+      return `🔍 Analyzing Job Description:\n\n${snippet}`;
+    }
+
+    return content;
   };
 
   const handleAnalyzeFitment = (e: React.FormEvent) => {

@@ -3,7 +3,7 @@
 import { useState, ReactNode } from "react";
 import { Terminal, Loader2, Shield, Cpu, Send, RefreshCw, MessageSquare } from "lucide-react";
 
-interface MessageType {
+export interface MessageType {
   id: string;
   role: string;
   parts?: Array<{ type?: string; text?: string }>;
