@@ -215,11 +215,14 @@ export default function AiCopilot({
 }
 
 function parseInlineMarkdown(text: string) {
-  const regex = /(\*\*.*?\*\*|`.*?`)/g;
+  const regex = /(\*\*.*?\*\*|\*.*?\*|`.*?`)/g;
   const parts = text.split(regex);
   return parts.map((part, index) => {
     if (part.startsWith('**') && part.endsWith('**')) {
       return <strong key={index} className="font-semibold text-slate-900">{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith('*') && part.endsWith('*')) {
+      return <em key={index} className="italic text-slate-700">{part.slice(1, -1)}</em>;
     }
     if (part.startsWith('`') && part.endsWith('`')) {
       return <code key={index} className="bg-slate-100 px-1 py-0.5 rounded font-mono text-[11px] text-copper">{part.slice(1, -1)}</code>;
